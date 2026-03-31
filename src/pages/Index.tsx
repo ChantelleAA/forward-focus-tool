@@ -1,16 +1,167 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Target, FileText, Linkedin, Heart } from "lucide-react";
+import FileUpload from "@/components/FileUpload";
+import ResultCard from "@/components/ResultCard";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const MOCK_RESULTS = {
+  fit: "Based on your experience, you show a strong alignment with the target role in strategic thinking and stakeholder management. Your background in project delivery translates well. Key gaps include direct experience with the specific tech stack mentioned and formal certification in the domain. Overall fit: 72%.",
+  cv: "Lead with impact metrics — quantify your achievements (e.g., 'reduced delivery time by 30%'). Reorder your skills section to mirror the job description keywords. Add a professional summary that bridges your current role to the target. Remove outdated technologies from 2015 and earlier.",
+  linkedin: "Update your headline to reflect your target role, not your current one. Add 3–5 relevant skills from the job description. Request recommendations from colleagues who can speak to transferable skills. Your About section should tell your career transition story.",
+  letter: "You have more relevant experience than you think. Your ability to manage cross-functional teams, deliver under pressure, and communicate complex ideas are exactly what this role demands. Career transitions are not about starting over — they are about reframing what you already bring. You are closer than you feel.",
+};
+
+const Index = () => {
+  const [experience, setExperience] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [linkedinFile, setLinkedinFile] = useState<File | null>(null);
+  const [jobDescription, setJobDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<typeof MOCK_RESULTS | null>(null);
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    setResults(null);
+    // Simulate analysis
+    await new Promise((r) => setTimeout(r, 2500));
+    setResults(MOCK_RESULTS);
+    setLoading(false);
+  };
+
+  const canSubmit = experience.trim().length > 0 || cvFile !== null;
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border/60 bg-card/60 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-6 py-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Target className="h-5 w-5" />
+          </div>
+          <h1 className="font-heading text-xl font-bold tracking-tight">
+            Career Transition Co-pilot
+          </h1>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-3xl px-6 py-10">
+        {/* Input Form */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-muted-foreground">
+              Share your background and a target role. We'll analyse your fit and
+              give you actionable next steps.
+            </p>
+          </div>
+
+          {/* Experience */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-foreground">
+              Tell us what you have done
+            </label>
+            <Textarea
+              value={experience}
+              onChange={(e) => setExperience(e.target.value)}
+              placeholder="Just write. No structure needed. Messy is fine."
+              className="min-h-[140px] resize-y border-input bg-card text-sm"
+            />
+          </div>
+
+          {/* File Uploads */}
+          <div className="grid gap-6 sm:grid-cols-2">
+            <FileUpload
+              label="Upload your CV (PDF)"
+              file={cvFile}
+              onFileChange={setCvFile}
+            />
+            <FileUpload
+              label="Upload your LinkedIn profile (PDF, optional)"
+              file={linkedinFile}
+              onFileChange={setLinkedinFile}
+              helperText="On LinkedIn: go to your profile, click More, Save to PDF"
+            />
+          </div>
+
+          {/* Job Description */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-foreground">
+              Paste the job description you are targeting
+            </label>
+            <Textarea
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Copy and paste the full job listing here…"
+              className="min-h-[140px] resize-y border-input bg-card text-sm"
+            />
+          </div>
+
+          {/* Submit */}
+          <Button
+            size="lg"
+            onClick={handleSubmit}
+            disabled={!canSubmit || loading}
+            className="w-full font-heading text-base font-semibold tracking-wide"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Analysing…
+              </>
+            ) : (
+              "Analyse My Profile"
+            )}
+          </Button>
+        </section>
+
+        {/* Loading shimmer */}
+        {loading && (
+          <section className="mt-12 grid gap-5 sm:grid-cols-2">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="h-48 animate-pulse-gentle rounded-xl bg-secondary"
+              />
+            ))}
+          </section>
+        )}
+
+        {/* Results */}
+        {results && !loading && (
+          <section className="mt-12 grid gap-5 sm:grid-cols-2">
+            <ResultCard
+              title="Fit Analysis"
+              icon={<Target className="h-5 w-5" />}
+              accentColor="primary"
+            >
+              {results.fit}
+            </ResultCard>
+            <ResultCard
+              title="CV Suggestions"
+              icon={<FileText className="h-5 w-5" />}
+              accentColor="accent"
+            >
+              {results.cv}
+            </ResultCard>
+            <ResultCard
+              title="LinkedIn Suggestions"
+              icon={<Linkedin className="h-5 w-5" />}
+              accentColor="primary"
+            >
+              {results.linkedin}
+            </ResultCard>
+            <ResultCard
+              title="Career Confidence Letter"
+              icon={<Heart className="h-5 w-5" />}
+              accentColor="accent"
+            >
+              {results.letter}
+            </ResultCard>
+          </section>
+        )}
+      </main>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
