@@ -22,6 +22,80 @@ interface ExpandedCard {
   content: string;
 }
 
+// Minimal markdown renderer: bold, italic, bullet lists, numbered lists, headings
+function MarkdownContent({ text }: { text: string }) {
+  const lines = text.split("\n");
+
+  return (
+    <div className="space-y-1.5 text-sm text-foreground/90 leading-relaxed">
+      {lines.map((line, i) => {
+        // H3
+        if (line.startsWith("### ")) {
+          return (
+            <h3 key={i} className="font-semibold text-base text-foreground mt-4 first:mt-0">
+              {renderInline(line.slice(4))}
+            </h3>
+          );
+        }
+        // H2
+        if (line.startsWith("## ")) {
+          return (
+            <h2 key={i} className="font-bold text-base text-foreground mt-5 first:mt-0">
+              {renderInline(line.slice(3))}
+            </h2>
+          );
+        }
+        // H1
+        if (line.startsWith("# ")) {
+          return (
+            <h1 key={i} className="font-bold text-lg text-foreground mt-5 first:mt-0">
+              {renderInline(line.slice(2))}
+            </h1>
+          );
+        }
+        // Unordered list
+        if (/^[-*•] /.test(line)) {
+          return (
+            <li key={i} className="ml-4 list-disc">
+              {renderInline(line.slice(2))}
+            </li>
+          );
+        }
+        // Numbered list
+        if (/^\d+\. /.test(line)) {
+          return (
+            <li key={i} className="ml-4 list-decimal">
+              {renderInline(line.replace(/^\d+\. /, ""))}
+            </li>
+          );
+        }
+        // Blank line → spacer
+        if (line.trim() === "") {
+          return <div key={i} className="h-2" />;
+        }
+        // Normal paragraph
+        return (
+          <p key={i}>{renderInline(line)}</p>
+        );
+      })}
+    </div>
+  );
+}
+
+function renderInline(text: string): React.ReactNode {
+  // Handle **bold** and *italic*
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
+
 const Index = () => {
   const [experience, setExperience] = useState("");
   const [cvFile, setCvFile] = useState<File | null>(null);
@@ -235,12 +309,23 @@ const Index = () => {
                   <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Maximize2 className="h-4 w-4 text-muted-foreground" />
                   </div>
+
                   <ResultCard
                     title={card.title}
                     icon={card.icon}
                     accentColor={card.accentColor}
                   >
-                    {card.content}
+                    {/* 2-line clamp with fade */}
+                    <div className="relative">
+                      <p className="line-clamp-2 text-sm text-foreground/80 leading-relaxed">
+                        {card.content}
+                      </p>
+                      {/* Fade-out overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 h-5 bg-gradient-to-t from-card to-transparent" />
+                    </div>
+                    <span className="mt-3 inline-block text-xs font-medium text-primary group-hover:underline">
+                      Read full output →
+                    </span>
                   </ResultCard>
                 </button>
               ))}
@@ -256,11 +341,11 @@ const Index = () => {
           onClick={() => setExpandedCard(null)}
         >
           <div
-            className="relative w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-2xl border border-border bg-card shadow-xl p-6"
+            className="relative w-full max-w-2xl max-h-[80vh] flex flex-col rounded-2xl border border-border bg-card shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal header */}
-            <div className="flex items-center justify-between mb-4">
+            {/* Modal header — sticky */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border/60">
               <div className="flex items-center gap-2 text-foreground font-heading font-semibold text-lg">
                 {expandedCard.icon}
                 {expandedCard.title}
@@ -273,13 +358,13 @@ const Index = () => {
               </button>
             </div>
 
-            {/* Modal content */}
-            <div className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
-              {expandedCard.content}
+            {/* Modal body — scrollable */}
+            <div className="overflow-y-auto px-6 py-5 flex-1">
+              <MarkdownContent text={expandedCard.content} />
             </div>
 
-            {/* Copy button */}
-            <div className="mt-6 flex justify-end">
+            {/* Modal footer — sticky */}
+            <div className="px-6 py-4 border-t border-border/60 flex justify-end">
               <Button
                 variant="outline"
                 size="sm"
