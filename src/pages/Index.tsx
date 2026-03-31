@@ -49,10 +49,10 @@ const Index = () => {
 
       const data = await response.json();
       setResults({
-        fit: data.fit || "",
-        cv: data.cv || "",
-        linkedin: data.linkedin || "",
-        letter: data.letter || "",
+        fitAnalysis: data.fitAnalysis || "",
+        cvSuggestions: data.cvSuggestions || "",
+        linkedinSuggestions: data.linkedinSuggestions || "",
+        confidenceLetter: data.confidenceLetter || "",
       });
     } catch (error) {
       console.error("Analysis error:", error);
