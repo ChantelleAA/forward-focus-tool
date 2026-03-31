@@ -4,13 +4,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Target, FileText, Linkedin, Heart } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import ResultCard from "@/components/ResultCard";
+import { extractTextFromPdf } from "@/lib/pdfExtract";
+import { toast } from "sonner";
 
-const MOCK_RESULTS = {
-  fit: "Based on your experience, you show a strong alignment with the target role in strategic thinking and stakeholder management. Your background in project delivery translates well. Key gaps include direct experience with the specific tech stack mentioned and formal certification in the domain. Overall fit: 72%.",
-  cv: "Lead with impact metrics — quantify your achievements (e.g., 'reduced delivery time by 30%'). Reorder your skills section to mirror the job description keywords. Add a professional summary that bridges your current role to the target. Remove outdated technologies from 2015 and earlier.",
-  linkedin: "Update your headline to reflect your target role, not your current one. Add 3–5 relevant skills from the job description. Request recommendations from colleagues who can speak to transferable skills. Your About section should tell your career transition story.",
-  letter: "You have more relevant experience than you think. Your ability to manage cross-functional teams, deliver under pressure, and communicate complex ideas are exactly what this role demands. Career transitions are not about starting over — they are about reframing what you already bring. You are closer than you feel.",
-};
+const WEBHOOK_URL = "https://chantelleaa.app.n8n.cloud/webhook/career-copilot";
+
+interface AnalysisResults {
+  fit: string;
+  cv: string;
+  linkedin: string;
+  letter: string;
+}
 
 const Index = () => {
   const [experience, setExperience] = useState("");
