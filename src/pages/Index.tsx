@@ -4,13 +4,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Target, FileText, Linkedin, Heart } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import ResultCard from "@/components/ResultCard";
+import { extractTextFromPdf } from "@/lib/pdfExtract";
+import { toast } from "sonner";
 
-const MOCK_RESULTS = {
-  fit: "Based on your experience, you show a strong alignment with the target role in strategic thinking and stakeholder management. Your background in project delivery translates well. Key gaps include direct experience with the specific tech stack mentioned and formal certification in the domain. Overall fit: 72%.",
-  cv: "Lead with impact metrics — quantify your achievements (e.g., 'reduced delivery time by 30%'). Reorder your skills section to mirror the job description keywords. Add a professional summary that bridges your current role to the target. Remove outdated technologies from 2015 and earlier.",
-  linkedin: "Update your headline to reflect your target role, not your current one. Add 3–5 relevant skills from the job description. Request recommendations from colleagues who can speak to transferable skills. Your About section should tell your career transition story.",
-  letter: "You have more relevant experience than you think. Your ability to manage cross-functional teams, deliver under pressure, and communicate complex ideas are exactly what this role demands. Career transitions are not about starting over — they are about reframing what you already bring. You are closer than you feel.",
-};
+const WEBHOOK_URL = "https://chantelleaa.app.n8n.cloud/webhook/career-copilot";
+
+interface AnalysisResults {
+  fit: string;
+  cv: string;
+  linkedin: string;
+  letter: string;
+}
 
 const Index = () => {
   const [experience, setExperience] = useState("");
@@ -18,15 +22,44 @@ const Index = () => {
   const [linkedinFile, setLinkedinFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<typeof MOCK_RESULTS | null>(null);
+  const [results, setResults] = useState<AnalysisResults | null>(null);
 
   const handleSubmit = async () => {
     setLoading(true);
     setResults(null);
-    // Simulate analysis
-    await new Promise((r) => setTimeout(r, 2500));
-    setResults(MOCK_RESULTS);
-    setLoading(false);
+
+    try {
+      const cvText = cvFile ? await extractTextFromPdf(cvFile) : "";
+      const linkedinText = linkedinFile ? await extractTextFromPdf(linkedinFile) : "";
+
+      const response = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brainDump: experience,
+          cvText,
+          linkedinText,
+          jobDescription,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      setResults({
+        fit: data.fit || "",
+        cv: data.cv || "",
+        linkedin: data.linkedin || "",
+        letter: data.letter || "",
+      });
+    } catch (error) {
+      console.error("Analysis error:", error);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const canSubmit = experience.trim().length > 0 || cvFile !== null;
