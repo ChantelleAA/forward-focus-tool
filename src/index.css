@@ -5,34 +5,34 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 @layer base {
-  :root {
-    --background: 270 30% 97%;
-    --foreground: 260 25% 15%;
+:root {
+    --background: 330 40% 97%;
+    --foreground: 300 25% 15%;
 
-    --card: 270 25% 99%;
-    --card-foreground: 260 25% 15%;
+    --card: 330 30% 99%;
+    --card-foreground: 300 25% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 260 25% 15%;
+    --popover-foreground: 300 25% 15%;
 
-    --primary: 172 50% 40%;
+    --primary: 330 65% 55%;        /* rose pink */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 270 20% 92%;
-    --secondary-foreground: 260 25% 15%;
+    --secondary: 280 25% 92%;      /* soft lavender */
+    --secondary-foreground: 300 25% 15%;
 
-    --muted: 270 15% 93%;
-    --muted-foreground: 260 10% 50%;
+    --muted: 320 20% 93%;
+    --muted-foreground: 300 10% 50%;
 
-    --accent: 12 80% 62%;
+    --accent: 270 55% 65%;         /* lilac purple */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 270 15% 88%;
-    --input: 270 15% 88%;
-    --ring: 172 50% 40%;
+    --border: 320 20% 88%;
+    --input: 320 20% 88%;
+    --ring: 330 65% 55%;
 
     --radius: 0.75rem;
 
