@@ -167,28 +167,28 @@ const Index = () => {
               icon={<Target className="h-5 w-5" />}
               accentColor="primary"
             >
-              {results.fit}
+              {results.fitAnalysis}
             </ResultCard>
             <ResultCard
               title="CV Suggestions"
               icon={<FileText className="h-5 w-5" />}
               accentColor="accent"
             >
-              {results.cv}
+              {results.cvSuggestions}
             </ResultCard>
             <ResultCard
               title="LinkedIn Suggestions"
               icon={<Linkedin className="h-5 w-5" />}
               accentColor="primary"
             >
-              {results.linkedin}
+              {results.linkedinSuggestions}
             </ResultCard>
             <ResultCard
               title="Career Confidence Letter"
               icon={<Heart className="h-5 w-5" />}
               accentColor="accent"
             >
-              {results.letter}
+              {results.confidenceLetter}
             </ResultCard>
           </section>
         )}
