@@ -22,15 +22,44 @@ const Index = () => {
   const [linkedinFile, setLinkedinFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<typeof MOCK_RESULTS | null>(null);
+  const [results, setResults] = useState<AnalysisResults | null>(null);
 
   const handleSubmit = async () => {
     setLoading(true);
     setResults(null);
-    // Simulate analysis
-    await new Promise((r) => setTimeout(r, 2500));
-    setResults(MOCK_RESULTS);
-    setLoading(false);
+
+    try {
+      const cvText = cvFile ? await extractTextFromPdf(cvFile) : "";
+      const linkedinText = linkedinFile ? await extractTextFromPdf(linkedinFile) : "";
+
+      const response = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brainDump: experience,
+          cvText,
+          linkedinText,
+          jobDescription,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      setResults({
+        fit: data.fit || "",
+        cv: data.cv || "",
+        linkedin: data.linkedin || "",
+        letter: data.letter || "",
+      });
+    } catch (error) {
+      console.error("Analysis error:", error);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const canSubmit = experience.trim().length > 0 || cvFile !== null;
