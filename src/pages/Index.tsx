@@ -10,10 +10,10 @@ import { toast } from "sonner";
 const WEBHOOK_URL = "https://chantelleaa.app.n8n.cloud/webhook/career-copilot";
 
 interface AnalysisResults {
-  fit: string;
-  cv: string;
-  linkedin: string;
-  letter: string;
+  fitAnalysis: string;
+  cvSuggestions: string;
+  linkedinSuggestions: string;
+  confidenceLetter: string;
 }
 
 const Index = () => {
