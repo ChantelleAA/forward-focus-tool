@@ -44,15 +44,38 @@ const Index = () => {
       });
 
       if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        console.error("Webhook error:", response.status, errorText);
         throw new Error(`Request failed with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const rawText = await response.text();
+      console.log("Webhook raw response:", rawText);
+      
+      let data: any;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        // If the response is an array, take the first element
+        try {
+          const parsed = JSON.parse(rawText);
+          data = Array.isArray(parsed) ? parsed[0] : parsed;
+        } catch {
+          console.error("Failed to parse response as JSON:", rawText);
+          throw new Error("Invalid response format from webhook");
+        }
+      }
+      
+      // Handle if n8n returns an array
+      if (Array.isArray(data)) {
+        data = data[0];
+      }
+
       setResults({
-        fitAnalysis: data.fitAnalysis || "",
-        cvSuggestions: data.cvSuggestions || "",
-        linkedinSuggestions: data.linkedinSuggestions || "",
-        confidenceLetter: data.confidenceLetter || "",
+        fitAnalysis: data.fitAnalysis || data.fit_analysis || data.fit || "",
+        cvSuggestions: data.cvSuggestions || data.cv_suggestions || data.cv || "",
+        linkedinSuggestions: data.linkedinSuggestions || data.linkedin_suggestions || data.linkedin || "",
+        confidenceLetter: data.confidenceLetter || data.confidence_letter || data.letter || "",
       });
     } catch (error) {
       console.error("Analysis error:", error);
