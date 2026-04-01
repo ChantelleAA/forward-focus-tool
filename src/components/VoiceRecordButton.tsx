@@ -12,12 +12,14 @@ const VoiceRecordButton = ({ onTranscript }: VoiceRecordButtonProps) => {
   const recognitionRef = useRef<any>(null);
 
   const toggleRecording = useCallback(() => {
+    // Stop
     if (isRecording) {
       recognitionRef.current?.stop();
       setIsRecording(false);
       return;
     }
 
+    // Start
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -31,6 +33,12 @@ const VoiceRecordButton = ({ onTranscript }: VoiceRecordButtonProps) => {
     recognition.interimResults = false;
     recognition.lang = "en-US";
 
+    // Helpful diagnostics
+    recognition.onstart = () => console.log("Speech recognition started");
+    recognition.onaudiostart = () => console.log("Audio capturing started");
+    recognition.onspeechstart = () => console.log("Speech started");
+    recognition.onspeechend = () => console.log("Speech ended");
+
     recognition.onresult = (event: any) => {
       let transcript = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -38,16 +46,37 @@ const VoiceRecordButton = ({ onTranscript }: VoiceRecordButtonProps) => {
           transcript += event.results[i][0].transcript;
         }
       }
+
       if (transcript) {
+        // Optional but useful while testing
+        toast.success("Captured speech");
         onTranscript(transcript);
       }
     };
 
     recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      if (event.error === "not-allowed") {
-        toast.error("Microphone access denied. Please allow microphone permissions.");
+      console.error("Speech recognition error:", event.error, event);
+
+      switch (event.error) {
+        case "not-allowed":
+        case "service-not-allowed":
+          toast.error("Microphone access denied. Please allow microphone permissions.");
+          break;
+        case "network":
+          toast.error(
+            "Speech-to-text failed due to a network error. Try disabling ad blockers/VPN, using a different network, or Chrome Incognito."
+          );
+          break;
+        case "no-speech":
+          toast.error("No speech detected. Try again and speak closer to the microphone.");
+          break;
+        case "audio-capture":
+          toast.error("No microphone was found (or it’s in use by another app).");
+          break;
+        default:
+          toast.error(`Speech recognition error: ${event.error}`);
       }
+
       setIsRecording(false);
     };
 
