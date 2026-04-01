@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Target, FileText, Linkedin, Heart, X, Maximize2 } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
+import VoiceRecordButton from "@/components/VoiceRecordButton";
 import ResultCard from "@/components/ResultCard";
 import { extractTextFromPdf } from "@/lib/pdfExtract";
 import { toast } from "sonner";
@@ -220,9 +221,16 @@ const Index = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-foreground">
-              Tell us what you have done
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-foreground">
+                Tell us what you have done
+              </label>
+              <VoiceRecordButton
+                onTranscript={(text) =>
+                  setExperience((prev) => (prev ? prev + " " + text : text))
+                }
+              />
+            </div>
             <Textarea
               value={experience}
               onChange={(e) => setExperience(e.target.value)}
