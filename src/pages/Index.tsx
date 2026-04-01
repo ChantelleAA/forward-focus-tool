@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Target, FileText, Linkedin, Heart, X, Maximize2 } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
+import VoiceRecordButton from "@/components/VoiceRecordButton";
 import ResultCard from "@/components/ResultCard";
 import { extractTextFromPdf } from "@/lib/pdfExtract";
 import { toast } from "sonner";
