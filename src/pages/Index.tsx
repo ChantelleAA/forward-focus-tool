@@ -118,7 +118,11 @@ const Index = () => {
   }, []);
 
   const handleSubmit = async () => {
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
+    setPolling(false);
+    setPollAttempt(0);
     setResults(null);
 
     try {
@@ -128,6 +132,7 @@ const Index = () => {
       const response = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           brainDump: experience,
           cvText,
@@ -153,9 +158,7 @@ const Index = () => {
         throw new Error("Invalid response format from webhook");
       }
 
-      if (Array.isArray(data)) {
-        data = data[0];
-      }
+      if (Array.isArray(data)) data = data[0];
 
       // Check if this is an acknowledgment (processing) response
       const isAck =
@@ -166,19 +169,24 @@ const Index = () => {
 
       if (isAck) {
         console.log("Received ack, starting to poll…", data);
-        toast.info("Your analysis is being processed…");
+        setPolling(true);
 
         const pollUrl = data.pollUrl || data.poll_url || WEBHOOK_URL;
         const executionId = data.executionId || data.execution_id || data.id || "";
-        const maxAttempts = 60; // up to ~5 minutes
-        const interval = 5000; // 5s
+        const maxAttempts = 60;
+        const interval = 5000;
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          if (controller.signal.aborted) return;
+
+          setPollAttempt(attempt + 1);
           await new Promise((r) => setTimeout(r, interval));
+
+          if (controller.signal.aborted) return;
 
           const pollResponse = await fetch(
             executionId ? `${pollUrl}?executionId=${executionId}` : pollUrl,
-            { method: "GET" }
+            { method: "GET", signal: controller.signal }
           );
 
           if (!pollResponse.ok) {
@@ -198,7 +206,6 @@ const Index = () => {
 
           if (Array.isArray(pollData)) pollData = pollData[0];
 
-          // Still processing
           if (
             pollData.status === "processing" ||
             pollData.status === "pending" ||
@@ -207,7 +214,6 @@ const Index = () => {
             continue;
           }
 
-          // We have results
           if (pollData.fitAnalysis || pollData.fit_analysis || pollData.fit) {
             setResults({
               fitAnalysis: pollData.fitAnalysis || pollData.fit_analysis || pollData.fit || "",
@@ -216,6 +222,8 @@ const Index = () => {
               confidenceLetter: pollData.confidenceLetter || pollData.confidence_letter || pollData.letter || "",
             });
             setLoading(false);
+            setPolling(false);
+            setPollAttempt(0);
             return;
           }
         }
@@ -230,11 +238,14 @@ const Index = () => {
         linkedinSuggestions: data.linkedinSuggestions || data.linkedin_suggestions || data.linkedin || "",
         confidenceLetter: data.confidenceLetter || data.confidence_letter || data.letter || "",
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === "AbortError") return;
       console.error("Analysis error:", error);
       toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+      setPolling(false);
+      setPollAttempt(0);
     }
   };
 
