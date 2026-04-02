@@ -349,32 +349,55 @@ const Index = () => {
             />
           </div>
 
-          <Button
-            size="lg"
-            onClick={handleSubmit}
-            disabled={!canSubmit || loading}
-            className="w-full font-heading text-base font-semibold tracking-wide"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Analysing…
-              </>
-            ) : (
-              "Analyse My Profile"
+          <div className="flex gap-3">
+            <Button
+              size="lg"
+              onClick={handleSubmit}
+              disabled={!canSubmit || loading}
+              className="flex-1 font-heading text-base font-semibold tracking-wide"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  {polling ? `Checking for results… (${pollAttempt})` : "Analysing…"}
+                </>
+              ) : (
+                "Analyse My Profile"
+              )}
+            </Button>
+            {loading && (
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={handleCancel}
+                className="font-heading text-base"
+              >
+                <X className="mr-1.5 h-4 w-4" />
+                Cancel
+              </Button>
             )}
-          </Button>
+          </div>
         </section>
 
-        {/* Loading shimmer */}
+        {/* Loading shimmer with progress */}
         {loading && (
-          <section className="mt-12 grid gap-5 sm:grid-cols-2">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="h-48 animate-pulse-gentle rounded-xl bg-secondary"
-              />
-            ))}
+          <section className="mt-12 space-y-4">
+            {polling && (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">
+                  Processing your profile — check {pollAttempt} of 60
+                </span>
+              </div>
+            )}
+            <div className="grid gap-5 sm:grid-cols-2">
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-48 animate-pulse-gentle rounded-xl bg-secondary"
+                />
+              ))}
+            </div>
           </section>
         )}
 
