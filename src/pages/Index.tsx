@@ -103,8 +103,19 @@ const Index = () => {
   const [linkedinFile, setLinkedinFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const [polling, setPolling] = useState(false);
+  const [pollAttempt, setPollAttempt] = useState(0);
   const [results, setResults] = useState<AnalysisResults | null>(null);
   const [expandedCard, setExpandedCard] = useState<ExpandedCard | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+    setLoading(false);
+    setPolling(false);
+    setPollAttempt(0);
+    toast.info("Analysis cancelled");
+  }, []);
 
   const handleSubmit = async () => {
     setLoading(true);
