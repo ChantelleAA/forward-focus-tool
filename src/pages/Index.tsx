@@ -138,19 +138,81 @@ const Index = () => {
       try {
         data = JSON.parse(rawText);
       } catch {
-        try {
-          const parsed = JSON.parse(rawText);
-          data = Array.isArray(parsed) ? parsed[0] : parsed;
-        } catch {
-          console.error("Failed to parse response as JSON:", rawText);
-          throw new Error("Invalid response format from webhook");
-        }
+        console.error("Failed to parse response as JSON:", rawText);
+        throw new Error("Invalid response format from webhook");
       }
 
       if (Array.isArray(data)) {
         data = data[0];
       }
 
+      // Check if this is an acknowledgment (processing) response
+      const isAck =
+        data.status === "processing" ||
+        data.status === "pending" ||
+        data.status === "in_progress" ||
+        (data.executionId && !data.fitAnalysis && !data.fit_analysis);
+
+      if (isAck) {
+        console.log("Received ack, starting to poll…", data);
+        toast.info("Your analysis is being processed…");
+
+        const pollUrl = data.pollUrl || data.poll_url || WEBHOOK_URL;
+        const executionId = data.executionId || data.execution_id || data.id || "";
+        const maxAttempts = 60; // up to ~5 minutes
+        const interval = 5000; // 5s
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          await new Promise((r) => setTimeout(r, interval));
+
+          const pollResponse = await fetch(
+            executionId ? `${pollUrl}?executionId=${executionId}` : pollUrl,
+            { method: "GET" }
+          );
+
+          if (!pollResponse.ok) {
+            console.warn(`Poll attempt ${attempt + 1} returned ${pollResponse.status}`);
+            continue;
+          }
+
+          const pollRaw = await pollResponse.text();
+          console.log(`Poll attempt ${attempt + 1}:`, pollRaw);
+
+          let pollData: any;
+          try {
+            pollData = JSON.parse(pollRaw);
+          } catch {
+            continue;
+          }
+
+          if (Array.isArray(pollData)) pollData = pollData[0];
+
+          // Still processing
+          if (
+            pollData.status === "processing" ||
+            pollData.status === "pending" ||
+            pollData.status === "in_progress"
+          ) {
+            continue;
+          }
+
+          // We have results
+          if (pollData.fitAnalysis || pollData.fit_analysis || pollData.fit) {
+            setResults({
+              fitAnalysis: pollData.fitAnalysis || pollData.fit_analysis || pollData.fit || "",
+              cvSuggestions: pollData.cvSuggestions || pollData.cv_suggestions || pollData.cv || "",
+              linkedinSuggestions: pollData.linkedinSuggestions || pollData.linkedin_suggestions || pollData.linkedin || "",
+              confidenceLetter: pollData.confidenceLetter || pollData.confidence_letter || pollData.letter || "",
+            });
+            setLoading(false);
+            return;
+          }
+        }
+
+        throw new Error("Timed out waiting for results");
+      }
+
+      // Direct (non-ack) response — use immediately
       setResults({
         fitAnalysis: data.fitAnalysis || data.fit_analysis || data.fit || "",
         cvSuggestions: data.cvSuggestions || data.cv_suggestions || data.cv || "",
