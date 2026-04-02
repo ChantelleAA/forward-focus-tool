@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Target, FileText, Linkedin, Heart, X, Maximize2 } from "lucide-react";
@@ -103,11 +103,26 @@ const Index = () => {
   const [linkedinFile, setLinkedinFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const [polling, setPolling] = useState(false);
+  const [pollAttempt, setPollAttempt] = useState(0);
   const [results, setResults] = useState<AnalysisResults | null>(null);
   const [expandedCard, setExpandedCard] = useState<ExpandedCard | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+    setLoading(false);
+    setPolling(false);
+    setPollAttempt(0);
+    toast.info("Analysis cancelled");
+  }, []);
 
   const handleSubmit = async () => {
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
+    setPolling(false);
+    setPollAttempt(0);
     setResults(null);
 
     try {
@@ -117,6 +132,7 @@ const Index = () => {
       const response = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           brainDump: experience,
           cvText,
@@ -142,9 +158,7 @@ const Index = () => {
         throw new Error("Invalid response format from webhook");
       }
 
-      if (Array.isArray(data)) {
-        data = data[0];
-      }
+      if (Array.isArray(data)) data = data[0];
 
       // Check if this is an acknowledgment (processing) response
       const isAck =
@@ -155,19 +169,24 @@ const Index = () => {
 
       if (isAck) {
         console.log("Received ack, starting to poll…", data);
-        toast.info("Your analysis is being processed…");
+        setPolling(true);
 
         const pollUrl = data.pollUrl || data.poll_url || WEBHOOK_URL;
         const executionId = data.executionId || data.execution_id || data.id || "";
-        const maxAttempts = 60; // up to ~5 minutes
-        const interval = 5000; // 5s
+        const maxAttempts = 60;
+        const interval = 5000;
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          if (controller.signal.aborted) return;
+
+          setPollAttempt(attempt + 1);
           await new Promise((r) => setTimeout(r, interval));
+
+          if (controller.signal.aborted) return;
 
           const pollResponse = await fetch(
             executionId ? `${pollUrl}?executionId=${executionId}` : pollUrl,
-            { method: "GET" }
+            { method: "GET", signal: controller.signal }
           );
 
           if (!pollResponse.ok) {
@@ -187,7 +206,6 @@ const Index = () => {
 
           if (Array.isArray(pollData)) pollData = pollData[0];
 
-          // Still processing
           if (
             pollData.status === "processing" ||
             pollData.status === "pending" ||
@@ -196,7 +214,6 @@ const Index = () => {
             continue;
           }
 
-          // We have results
           if (pollData.fitAnalysis || pollData.fit_analysis || pollData.fit) {
             setResults({
               fitAnalysis: pollData.fitAnalysis || pollData.fit_analysis || pollData.fit || "",
@@ -205,6 +222,8 @@ const Index = () => {
               confidenceLetter: pollData.confidenceLetter || pollData.confidence_letter || pollData.letter || "",
             });
             setLoading(false);
+            setPolling(false);
+            setPollAttempt(0);
             return;
           }
         }
@@ -219,11 +238,14 @@ const Index = () => {
         linkedinSuggestions: data.linkedinSuggestions || data.linkedin_suggestions || data.linkedin || "",
         confidenceLetter: data.confidenceLetter || data.confidence_letter || data.letter || "",
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === "AbortError") return;
       console.error("Analysis error:", error);
       toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+      setPolling(false);
+      setPollAttempt(0);
     }
   };
 
@@ -327,32 +349,55 @@ const Index = () => {
             />
           </div>
 
-          <Button
-            size="lg"
-            onClick={handleSubmit}
-            disabled={!canSubmit || loading}
-            className="w-full font-heading text-base font-semibold tracking-wide"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Analysing…
-              </>
-            ) : (
-              "Analyse My Profile"
+          <div className="flex gap-3">
+            <Button
+              size="lg"
+              onClick={handleSubmit}
+              disabled={!canSubmit || loading}
+              className="flex-1 font-heading text-base font-semibold tracking-wide"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  {polling ? `Checking for results… (${pollAttempt})` : "Analysing…"}
+                </>
+              ) : (
+                "Analyse My Profile"
+              )}
+            </Button>
+            {loading && (
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={handleCancel}
+                className="font-heading text-base"
+              >
+                <X className="mr-1.5 h-4 w-4" />
+                Cancel
+              </Button>
             )}
-          </Button>
+          </div>
         </section>
 
-        {/* Loading shimmer */}
+        {/* Loading shimmer with progress */}
         {loading && (
-          <section className="mt-12 grid gap-5 sm:grid-cols-2">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="h-48 animate-pulse-gentle rounded-xl bg-secondary"
-              />
-            ))}
+          <section className="mt-12 space-y-4">
+            {polling && (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">
+                  Processing your profile — check {pollAttempt} of 60
+                </span>
+              </div>
+            )}
+            <div className="grid gap-5 sm:grid-cols-2">
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-48 animate-pulse-gentle rounded-xl bg-secondary"
+                />
+              ))}
+            </div>
           </section>
         )}
 
